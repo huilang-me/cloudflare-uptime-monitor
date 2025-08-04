@@ -107,7 +107,7 @@ export const onRequest = async (request: Request, env, ctx) => {
       const name = searchParams.get("name");
       const limit = parseInt(searchParams.get("limit") || "20");
 
-      let query = "SELECT name, status, timestamp, scheduled FROM logs";
+      let query = "SELECT name, status, timestamp, scheduled, duration_ms FROM logs";
       const binds = [];
 
       if (name) {
