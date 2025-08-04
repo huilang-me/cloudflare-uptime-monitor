@@ -94,7 +94,7 @@ export const onRequest = async (request: Request, env, ctx) => {
     }
 
     // 👉 手动触发监控
-    if (pathname === env.UUID) {
+    if (pathname === `${env.UUID}/check`) {
       const results = await checkAllSites(env, "manual");
       return new Response(JSON.stringify(results, null, 2), {
         headers: { "Content-Type": "application/json" },

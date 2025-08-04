@@ -109,7 +109,7 @@ npx wrangler deploy
 访问首页可查看配置项状态：
 
 ```
-https://your-project.pages.dev/
+https://your-project.workers.dev/
 ```
 
 ---
@@ -119,7 +119,7 @@ https://your-project.pages.dev/
 访问：
 
 ```
-https://your-project.pages.dev/UUID
+https://your-project.workers.dev/UUID/check
 ```
 
 将 `UUID` 替换为你设置的环境变量值。
@@ -131,7 +131,7 @@ https://your-project.pages.dev/UUID
 访问：
 
 ```
-https://your-project.pages.dev/UUID/log?name=example&limit=20
+https://your-project.workers.dev/UUID/log?name=example&limit=20
 ```
 
 * `name`: 监控网站配置中的 `name`
@@ -144,15 +144,15 @@ https://your-project.pages.dev/UUID/log?name=example&limit=20
 查看系统当前配置：
 
 ```
-https://your-project.pages.dev/UUID/info
+https://your-project.workers.dev/UUID/info
 ```
 
 ---
 
 ## 🧠 监控机制
 
-* 使用 `fetch` 对每个网站发起 `GET` 请求（非 `HEAD`，保留完整访问）
-* 如果响应状态码不是 200，即判定为 `down`
+* 使用 `fetch` 对每个网站发起 `GET` 请求
+* 如果响应状态码不是 200，或者访问超时（30 秒），即判定为 `down`
 * 与上一次状态不同 → 写入数据库 + Telegram 通知
 * 每次检测写入数据库，并保留 5 周日志，旧日志自动删除
 
@@ -171,7 +171,7 @@ https://your-project.pages.dev/UUID/info
 ### Q: 如何调试定时任务？
 
 * 在 \[Cloudflare Dashboard > Workers & D1 > Cron Triggers] 可查看执行日志
-* 或通过 `/UUID` 路径手动测试
+* 或通过 `/UUID/check` 路径手动测试
 
 ### Q: 数据库连接失败？
 
@@ -184,20 +184,21 @@ https://your-project.pages.dev/UUID/info
 ## 📁 项目结构说明
 
 ```
-├── functions/
-│   ├── fetch.ts
-│   ├── scheduled.ts
-│   └── check.ts
-├── lib/
-│   ├── config.ts
-│   ├── time.ts
-│   └── telegram.ts
-├── index.ts                  # Cloudflare Workers 主文件
-├── schema.sql                # D1 数据库结构定义
-├── wrangler.toml             # Cloudflare Wrangler 配置（自动生成）
 ├── .github/
 │   └── workflows/
 │       └── deploy.yml        # 自动部署配置
+├── functions/
+│   ├── check.ts
+│   ├── fetch.ts
+│   └── scheduled.ts
+├── lib/
+│   ├── config.ts
+│   ├── fetchWithTimeout
+│   └── telegram.ts
+│   ├── time.ts
+├── index.ts                  # Cloudflare Workers 主文件
+├── schema.sql                # D1 数据库结构定义
+├── wrangler.toml             # Cloudflare Wrangler 配置（自动生成）
 └── README.md
 ```
 
