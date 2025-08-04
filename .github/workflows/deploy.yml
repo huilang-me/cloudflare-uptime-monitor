@@ -17,6 +17,7 @@ jobs:
           cat > wrangler.toml <<EOF
           name = "cloudflare-uptime-monitor"
           compatibility_date = "2025-08-04"
+          main = "index.ts"
 
           [triggers]
           crons = ["*/5 * * * *"]
