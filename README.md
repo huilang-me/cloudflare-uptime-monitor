@@ -187,15 +187,16 @@ https://your-project.workers.dev/UUID/info
 ├── .github/
 │   └── workflows/
 │       └── deploy.yml        # 自动部署配置
-├── functions/
-│   ├── check.ts
+├── functions/                # 函数目录
+│   ├── check.ts              # 检测网站在线
 │   ├── fetch.ts
-│   └── scheduled.ts
-├── lib/
-│   ├── config.ts
-│   ├── fetchWithTimeout
-│   └── telegram.ts
-│   ├── time.ts
+│   └── scheduled.ts          # 定时检测
+├── lib/                      # 库函数目录
+│   ├── config.ts             # 配置解析
+│   ├── fetchWithTimeout.ts   # 带超时的 fetch 函数
+│   ├── healthcheck.ts        # 健康检查
+│   └── telegram.ts           # Telegram 通知
+│   ├── time.ts               # 时间相关函数
 ├── index.ts                  # Cloudflare Workers 主文件
 ├── schema.sql                # D1 数据库结构定义
 ├── wrangler.toml             # Cloudflare Wrangler 配置（自动生成）
