@@ -1,6 +1,7 @@
 import { parseConfig } from "../lib/config";
 import { getBeijingTimeISOString } from "../lib/time";
 import { sendTelegram } from "../lib/telegram";
+import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 
 export async function checkAllSites(env, source = "scheduled") {
   const config = parseConfig(env.MONITOR_CONFIG_JSON);
@@ -16,14 +17,15 @@ export async function checkAllSites(env, source = "scheduled") {
     let statusCode = 0;
 
     try {
-      const res = await fetch(url, { method: "GET" });
+      const res = await fetchWithTimeout(url, { method: "GET" }, 30000); // 30 秒超时
       statusCode = res.status;
       status = res.status === 200 ? "up" : "down";
       for (const [k, v] of res.headers.entries()) {
         headers[k] = v;
       }
-    } catch {
+    } catch (e) {
       status = "down";
+      headers["error"] = e.name === "AbortError" ? "timeout" : e.message;
     }
 
     const last = await env.DB.prepare(
