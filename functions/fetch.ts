@@ -1,8 +1,7 @@
 import { parseConfig } from "../lib/config";
-import { getBeijingTimeISOString } from "../lib/time";
 import { checkAllSites } from "./check";
 
-export const onRequest: PagesFunction = async ({ request, env }) => {
+export const onRequest = async (request: Request, env, ctx) => {
   try {
     const url = new URL(request.url);
     const pathname = url.pathname.slice(1);
