@@ -1,0 +1,44 @@
+name: Deploy to Cloudflare Workers
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Generate wrangler.toml
+        run: |
+          cat > wrangler.toml <<EOF
+          name = "cloudflare-uptime-monitor"
+          compatibility_date = "2025-08-04"
+          main = "_worker.js"
+
+          [triggers]
+          crons = ["*/5 * * * *"]
+
+          [[d1_databases]]
+          binding = "DB"
+          database_name = "${{ secrets.D1_DATABASE_NAME }}"
+          database_id = "${{ secrets.D1_DATABASE_ID }}"
+
+          [vars]
+          UUID = "${{ secrets.UUID }}"
+          MONITOR_CONFIG_JSON = ${{ toJson(secrets.MONITOR_CONFIG_JSON) }}
+          TELEGRAM_BOT_TOKEN = "${{ secrets.TELEGRAM_BOT_TOKEN }}"
+          TELEGRAM_CHAT_ID = "${{ secrets.TELEGRAM_CHAT_ID }}"
+          EOF
+
+      - name: Install Wrangler
+        run: npm install -g wrangler
+
+      - name: Deploy to Cloudflare
+        run: wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
