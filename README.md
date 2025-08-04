@@ -184,8 +184,15 @@ https://your-project.pages.dev/UUID/info
 ## 📁 项目结构说明
 
 ```
-.
-├── _worker.js                # Cloudflare Workers 主文件
+├── functions/
+│   ├── fetch.ts
+│   ├── scheduled.ts
+│   └── check.ts
+├── lib/
+│   ├── config.ts
+│   ├── time.ts
+│   └── telegram.ts
+├── index.ts                  # Cloudflare Workers 主文件
 ├── schema.sql                # D1 数据库结构定义
 ├── wrangler.toml             # Cloudflare Wrangler 配置（自动生成）
 ├── .github/
