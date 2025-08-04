@@ -8,22 +8,29 @@ export async function checkAllSites(env, source = "scheduled") {
   const timestamp = getBeijingTimeISOString();
   const isScheduled = source === "scheduled";
   const results = [];
-  const MAX_LOG_AGE_MS = 1000 * 60 * 60 * 24 * 7 * 5;
+  const MAX_LOG_AGE_MS = 1000 * 60 * 60 * 24 * 7 * 5; // 5 weeks
 
   for (const site of config) {
     const { name, url } = site;
     let status = "unknown";
-    let headers = {};
     let statusCode = 0;
+    let headers = {};
+    let durationMs = 0;
 
     try {
-      const res = await fetchWithTimeout(url, { method: "GET" }, 30000); // 30 秒超时
+      const start = Date.now();
+
+      const res = await fetchWithTimeout(url, { method: "GET" }, 30000); // 30秒超时
+      durationMs = Date.now() - start;
+
       statusCode = res.status;
       status = res.status === 200 ? "up" : "down";
+
       for (const [k, v] of res.headers.entries()) {
         headers[k] = v;
       }
     } catch (e) {
+      durationMs = Date.now() - (start ?? Date.now());
       status = "down";
       headers["error"] = e.name === "AbortError" ? "timeout" : e.message;
     }
@@ -34,17 +41,18 @@ export async function checkAllSites(env, source = "scheduled") {
 
     const lastStatus = last?.status || "unknown";
     if (status !== lastStatus) {
-      const msg = status === "up"
-        ? `✅ 网站恢复: ${name}`
-        : `🔴 网站故障: ${name}`;
+      const msg =
+        status === "up"
+          ? `✅ 网站恢复: ${name}`
+          : `🔴 网站故障: ${name}`;
       await sendTelegram(env, msg);
     }
 
     await env.DB.prepare(
-      "INSERT INTO logs (name, status, timestamp, scheduled) VALUES (?, ?, ?, ?)"
-    ).bind(name, status, timestamp, isScheduled ? 1 : 0).run();
+      "INSERT INTO logs (name, status, timestamp, scheduled, duration_ms) VALUES (?, ?, ?, ?, ?)"
+    ).bind(name, status, timestamp, isScheduled ? 1 : 0, durationMs).run();
 
-    results.push({ name, status, statusCode, headers });
+    results.push({ name, status, statusCode, durationMs, headers });
   }
 
   const cutoff = new Date(Date.now() - MAX_LOG_AGE_MS).toISOString();
