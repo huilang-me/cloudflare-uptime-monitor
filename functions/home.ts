@@ -113,11 +113,10 @@ export async function renderHomePage(env): Promise<Response> {
         const now = new Date();
         const sites = ${JSON.stringify(config.map(site => site.name))};
 
-        // 获取某个时间戳的“YYYY-MM-DD HH”格式（按本地时区）
-        function getHourKey(dateStrOrObj) {
-          const d = new Date(dateStrOrObj);
+        function getHourKey(dateStr) {
+          const d = new Date(dateStr);
           d.setMinutes(0, 0, 0);
-          return d.getFullYear() + '-' +
+          return d.getFullYear() + '-' + 
                  String(d.getMonth() + 1).padStart(2, '0') + '-' +
                  String(d.getDate()).padStart(2, '0') + ' ' +
                  String(d.getHours()).padStart(2, '0');
@@ -130,6 +129,7 @@ export async function renderHomePage(env): Promise<Response> {
           fetch('/log?name=' + encodeURIComponent(siteName) + '&time=' + encodeURIComponent(hour))
             .then(res => res.json())
             .then(logs => {
+              // 升序排序
               logs.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
               let html = '<div class="popup-close"><button onclick="closePopup()">关闭</button></div>';
               html += '<h3>' + hour + ' - ' + siteName + ' 状态详情</h3>';
@@ -162,7 +162,7 @@ export async function renderHomePage(env): Promise<Response> {
             .then(logs => {
               const hourMap = {};
               logs.forEach(log => {
-                const key = getHourKey(log.timestamp); // local time hour key
+                const key = getHourKey(log.timestamp);
                 if (!hourMap[key]) hourMap[key] = [];
                 hourMap[key].push(log.status);
               });
@@ -171,7 +171,7 @@ export async function renderHomePage(env): Promise<Response> {
               for (let i = 23; i >= 0; i--) {
                 const d = new Date(now.getTime() - i * 60 * 60 * 1000);
                 d.setMinutes(0, 0, 0);
-                const key = getHourKey(d); // ⚠️ 使用 Date 对象而不是 toISOString()
+                const key = getHourKey(d.toISOString());
                 const statuses = hourMap[key] || [];
                 const hasFail = statuses.some(s => s !== 'up');
                 const cls = statuses.length === 0 ? '' : hasFail ? 'fail' : 'ok';
