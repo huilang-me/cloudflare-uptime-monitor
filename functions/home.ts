@@ -11,6 +11,7 @@ export async function renderHomePage(env): Promise<Response> {
       <meta charset="UTF-8">
       <title>网站监控状态</title>
       <style>
+        /* 保持原样 */
         body {
           font-family: sans-serif;
           padding: 2rem;
@@ -111,10 +112,11 @@ export async function renderHomePage(env): Promise<Response> {
       <div id="overlay" class="overlay" style="display:none;" onclick="closePopup()"></div>
       <script>
         const now = new Date();
+        const nowTs = Math.floor(now.getTime() / 1000); // 当前秒级时间戳
         const sites = ${JSON.stringify(config.map(site => site.name))};
 
-        function getHourKey(dateStr) {
-          const d = new Date(dateStr);
+        function getHourKeyFromTimestamp(ts) {
+          const d = new Date(ts * 1000);
           d.setMinutes(0, 0, 0);
           return d.getFullYear() + '-' + 
                  String(d.getMonth() + 1).padStart(2, '0') + '-' +
@@ -126,17 +128,21 @@ export async function renderHomePage(env): Promise<Response> {
           const hour = el.getAttribute('data-hour');
           const siteName = el.getAttribute('data-siteName');
 
-          fetch('/log?name=' + encodeURIComponent(siteName) + '&time=' + encodeURIComponent(hour))
+          const [datePart, hourPart] = hour.split(' ');
+          const [year, month, day] = datePart.split('-').map(Number);
+          const hourNum = Number(hourPart);
+          const timeTs = Math.floor(new Date(year, month -1, day, hourNum).getTime() / 1000);
+
+          fetch('/log?name=' + encodeURIComponent(siteName) + '&time=' + encodeURIComponent(timeTs))
             .then(res => res.json())
             .then(logs => {
-              // 升序排序
-              logs.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+              logs.sort((a, b) => a.timestamp - b.timestamp);
               let html = '<div class="popup-close"><button onclick="closePopup()">关闭</button></div>';
               html += '<h3>' + hour + ' - ' + siteName + ' 状态详情</h3>';
               html += '<div class="status-bar">';
               logs.forEach(log => {
                 const cls = log.status === 'up' ? 'ok' : 'fail';
-                const title = new Date(log.timestamp).toLocaleString();
+                const title = new Date(log.timestamp * 1000).toLocaleString();
                 html += '<div class="bar ' + cls + '" title="' + title + '"></div>';
               });
               html += '</div>';
@@ -152,26 +158,24 @@ export async function renderHomePage(env): Promise<Response> {
         }
 
         sites.forEach(function(name) {
-          const now = new Date();
-          const from = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-          const fromStr = from.toISOString();
-          const toStr = now.toISOString();
+          const fromTs = nowTs - 24 * 60 * 60;
+          const toTs = nowTs;
 
-          fetch('/log?name=' + encodeURIComponent(name) + '&from=' + encodeURIComponent(fromStr) + '&to=' + encodeURIComponent(toStr))
+          fetch('/log?name=' + encodeURIComponent(name) + '&from=' + fromTs + '&to=' + toTs)
             .then(res => res.json())
             .then(logs => {
               const hourMap = {};
               logs.forEach(log => {
-                const key = getHourKey(log.timestamp);
+                const key = getHourKeyFromTimestamp(log.timestamp);
                 if (!hourMap[key]) hourMap[key] = [];
                 hourMap[key].push(log.status);
               });
 
               const bars = [];
               for (let i = 23; i >= 0; i--) {
-                const d = new Date(now.getTime() - i * 60 * 60 * 1000);
+                const d = new Date((nowTs - i * 3600) * 1000);
                 d.setMinutes(0, 0, 0);
-                const key = getHourKey(d.toISOString());
+                const key = getHourKeyFromTimestamp(Math.floor(d.getTime() / 1000));
                 const statuses = hourMap[key] || [];
                 const hasFail = statuses.some(s => s !== 'up');
                 const cls = statuses.length === 0 ? '' : hasFail ? 'fail' : 'ok';
