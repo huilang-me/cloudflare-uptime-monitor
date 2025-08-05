@@ -96,11 +96,12 @@ export async function renderHomePage(env): Promise<Response> {
   `;
 
   for (const site of config) {
-    html += '
+    html += `
       <tr>
-        <td><a href="' + site.url + '" target="_blank">' + site.name + '</a></td>
-        <td><div class="status-bar" id="bar-' + site.name.replace(/[^a-zA-Z0-9]/g, "") + '">加载中...</div></td>
-      </tr>';
+        <td><a href="${site.url}" target="_blank">${site.name}</a></td>
+        <td><div class="status-bar" id="bar-${site.name.replace(/[^a-zA-Z0-9]/g, "")}">加载中...</div></td>
+      </tr>
+    `;
   }
 
   html += `
@@ -112,7 +113,7 @@ export async function renderHomePage(env): Promise<Response> {
         const now = new Date();
         const start = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
-        const sites = ` + JSON.stringify(config.map(site => site.name)) + `;
+        const sites = ${JSON.stringify(config.map(site => site.name))};
 
         function getHourKey(dateStr) {
           const d = new Date(dateStr);
