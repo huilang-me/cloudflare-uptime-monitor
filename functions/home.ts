@@ -171,7 +171,7 @@ export async function renderHomePage(env): Promise<Response> {
               for (let i = 23; i >= 0; i--) {
                 const d = new Date(now.getTime() - i * 60 * 60 * 1000);
                 d.setMinutes(0, 0, 0);
-                const key = getHourKey(d.toISOString());
+                const key = getHourKey(d);
                 const statuses = hourMap[key] || [];
                 const hasFail = statuses.some(s => s !== 'up');
                 const cls = statuses.length === 0 ? '' : hasFail ? 'fail' : 'ok';
