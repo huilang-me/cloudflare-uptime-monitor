@@ -128,7 +128,7 @@ export async function renderHomePage(env): Promise<Response> {
         }
 
         function showPopup(time) {
-          fetch(`/log?time=${encodeURIComponent(time)}&limit=1000`)
+          fetch('/log?time=' + encodeURIComponent(time) + '&limit=1000')
             .then(res => res.json())
             .then(logs => {
               let html = '<div class="popup-close"><button onclick="closePopup()">关闭</button></div>';
