@@ -1,8 +1,16 @@
 // functions/home.ts
 import { parseConfig } from "../lib/config";
 
+function getHourKey(timestamp: string): string {
+  const date = new Date(timestamp);
+  date.setMinutes(0, 0, 0);
+  return date.toISOString();
+}
+
 export async function renderHomePage(env): Promise<Response> {
   const config = parseConfig(env.MONITOR_CONFIG_JSON);
+  const now = Date.now();
+  const since = now - 24 * 60 * 60 * 1000; // 过去24小时
 
   let html = `
     <!DOCTYPE html>
@@ -67,24 +75,35 @@ export async function renderHomePage(env): Promise<Response> {
   `;
 
   for (const site of config) {
-    // 获取最近24条记录（按小时算）
-    const logs = await env.DB.prepare(
-      `SELECT status, timestamp FROM logs WHERE name = ? ORDER BY timestamp DESC LIMIT 24`
-    ).bind(site.name).all();
+    // 获取过去24小时的所有记录
+    const result = await env.DB.prepare(
+      `SELECT status, timestamp FROM logs WHERE name = ? AND timestamp >= ? ORDER BY timestamp ASC`
+    ).bind(site.name, new Date(since).toISOString()).all();
 
-    const bars = logs.results
-      .slice() // 防止修改原数组
-      .reverse() // 时间正序显示
-      .map(log => {
-        const time = new Date(log.timestamp).toLocaleString("zh-CN");
-        const cls = log.status === "up" ? "ok" : "fail";
-        return `<div class="bar ${cls}" title="${time}: ${log.status}"></div>`;
-      }).join("");
+    const hourlyMap = new Map<string, string[]>(); // key: hour ISO string, value: status[]
+
+    for (const log of result.results) {
+      const hour = getHourKey(log.timestamp);
+      if (!hourlyMap.has(hour)) hourlyMap.set(hour, []);
+      hourlyMap.get(hour)!.push(log.status);
+    }
+
+    // 构建最近24小时的24个小时块
+    const bars: string[] = [];
+    for (let i = 23; i >= 0; i--) {
+      const hourDate = new Date(now - i * 60 * 60 * 1000);
+      const hourKey = hourDate.toISOString().slice(0, 13) + ":00:00.000Z";
+      const statuses = hourlyMap.get(hourKey) || [];
+      const hasFailure = statuses.some(s => s !== "up");
+      const statusClass = hasFailure ? "fail" : (statuses.length > 0 ? "ok" : ""); // 没数据显示灰色
+      const title = `${hourDate.toLocaleString("zh-CN")}: ${statuses.length > 0 ? (hasFailure ? "异常" : "正常") : "无数据"}`;
+      bars.push(`<div class="bar ${statusClass}" title="${title}"></div>`);
+    }
 
     html += `
       <tr>
         <td><a href="${site.url}" target="_blank">${site.name}</a></td>
-        <td><div class="status-bar">${bars}</div></td>
+        <td><div class="status-bar">${bars.join("")}</div></td>
       </tr>
     `;
   }
