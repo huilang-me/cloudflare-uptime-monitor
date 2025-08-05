@@ -164,7 +164,7 @@ export async function renderHomePage(env): Promise<Response> {
                 var hasFail = statuses.some(function(s) { return s !== 'up'; });
                 var cls = statuses.length === 0 ? '' : hasFail ? 'fail' : 'ok';
                 var title = key + (statuses.length === 0 ? ': 无数据' : hasFail ? ': 异常' : ': 正常');
-                bars.push('<div class="bar ' + cls + '" title="' + title + '" onclick="showPopup(\'' + key + '\')"></div>');
+                bars.push('<div class="bar ' + cls + '" title="' + title + '" onclick="showPopup(\\'' + key + '\\')"></div>');
               }
 
               var container = document.getElementById('bar-' + name.replace(/[^a-zA-Z0-9]/g, ""));
