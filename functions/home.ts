@@ -119,11 +119,17 @@ export async function renderHomePage(env): Promise<Response> {
           return d.getFullYear() + '-' + (d.getMonth()+1).toString().padStart(2, '0') + '-' + d.getDate().toString().padStart(2, '0') + ' ' + d.getHours().toString().padStart(2, '0');
         }
 
-        function showPopup(hour, siteName) {
+        function showPopup(el) {
+          const hour = el.getAttribute('data-hour');
+          const siteName = el.getAttribute('data-siteName');
+        
           fetch('/log?name=' + encodeURIComponent(siteName) + '&limit=1000')
             .then(res => res.json())
             .then(logs => {
-              const logsInHour = logs.filter(log => getHourKey(log.timestamp) === hour);
+              const logsInHour = logs.filter(log => {
+                const logHour = getHourKey(log.timestamp);
+                return logHour === hour;
+              });
               let html = '<div class="popup-close"><button onclick="closePopup()">关闭</button></div>';
               html += '<h3>' + hour + ' - ' + siteName + ' 状态详情</h3>';
               html += '<div class="status-bar">';
@@ -138,6 +144,7 @@ export async function renderHomePage(env): Promise<Response> {
               document.getElementById('overlay').style.display = 'block';
             });
         }
+
 
         function closePopup() {
           document.getElementById('popup').style.display = 'none';
@@ -164,9 +171,7 @@ export async function renderHomePage(env): Promise<Response> {
                 const hasFail = statuses.some(s => s !== 'up');
                 const cls = statuses.length === 0 ? '' : hasFail ? 'fail' : 'ok';
                 const title = key + (statuses.length === 0 ? ': 无数据' : hasFail ? ': 异常' : ': 正常');
-                //bars.push('<div class="bar ' + cls + '" title="' + title + '" onclick="showPopup(\\'' + key + '\\', \\' + siteName + '\\')"></div>');
-                bars.push('<div class="bar ' + cls + '" title="' + title + '" onclick="showPopup(\\'' + key + '\\',  \\' + siteName + '\\'    )"></div>');
-
+                bars.push('<div class="bar ' + cls + '" title="' + title + '" data-hour="' + key + '" data-siteName="' + name + '" onclick="showPopup(this)"></div>');
               }
 
               const container = document.getElementById('bar-' + name.replace(/[^a-zA-Z0-9]/g, ""));
