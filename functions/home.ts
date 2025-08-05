@@ -77,7 +77,7 @@ export async function renderHomePage(env): Promise<Response> {
       .reverse() // 时间正序显示
       .map(log => {
         const time = new Date(log.timestamp).toLocaleString("zh-CN");
-        const cls = log.status === "ok" ? "ok" : "fail";
+        const cls = log.status === "up" ? "ok" : "fail";
         return `<div class="bar ${cls}" title="${time}: ${log.status}"></div>`;
       }).join("");
 
