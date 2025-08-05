@@ -116,27 +116,25 @@ export async function renderHomePage(env): Promise<Response> {
         function getHourKey(dateStr) {
           const d = new Date(dateStr);
           d.setMinutes(0, 0, 0);
-          return d.getFullYear() + '-' + (d.getMonth()+1).toString().padStart(2, '0') + '-' + d.getDate().toString().padStart(2, '0') + ' ' + d.getHours().toString().padStart(2, '0');
+          return d.getFullYear() + '-' + 
+                 String(d.getMonth() + 1).padStart(2, '0') + '-' +
+                 String(d.getDate()).padStart(2, '0') + ' ' +
+                 String(d.getHours()).padStart(2, '0');
         }
 
         function showPopup(el) {
           const hour = el.getAttribute('data-hour');
           const siteName = el.getAttribute('data-siteName');
-        
-          fetch('/log?name=' + encodeURIComponent(siteName) + '&limit=1000')
+
+          fetch('/log?name=' + encodeURIComponent(siteName) + '&time=' + encodeURIComponent(hour))
             .then(res => res.json())
             .then(logs => {
-              const logsInHour = logs.filter(log => {
-                const logHour = getHourKey(log.timestamp);
-                return logHour === hour;
-              });
               // 升序排序
-              logsInHour.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-  
+              logs.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
               let html = '<div class="popup-close"><button onclick="closePopup()">关闭</button></div>';
               html += '<h3>' + hour + ' - ' + siteName + ' 状态详情</h3>';
               html += '<div class="status-bar">';
-              logsInHour.forEach(log => {
+              logs.forEach(log => {
                 const cls = log.status === 'up' ? 'ok' : 'fail';
                 const title = new Date(log.timestamp).toLocaleString();
                 html += '<div class="bar ' + cls + '" title="' + title + '"></div>';
@@ -148,14 +146,18 @@ export async function renderHomePage(env): Promise<Response> {
             });
         }
 
-
         function closePopup() {
           document.getElementById('popup').style.display = 'none';
           document.getElementById('overlay').style.display = 'none';
         }
 
         sites.forEach(function(name) {
-          fetch('/log?name=' + encodeURIComponent(name) + '&limit=500')
+          const now = new Date();
+          const from = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+          const fromStr = from.toISOString();
+          const toStr = now.toISOString();
+
+          fetch('/log?name=' + encodeURIComponent(name) + '&from=' + encodeURIComponent(fromStr) + '&to=' + encodeURIComponent(toStr))
             .then(res => res.json())
             .then(logs => {
               const hourMap = {};
