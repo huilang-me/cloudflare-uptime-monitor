@@ -44,7 +44,6 @@ export async function renderHomePage(env): Promise<Response> {
         }
         table {
           width: 100%;
-          min-width: 600px;
           border-collapse: separate;
           border-spacing: 0;
           background: #fff;
@@ -140,12 +139,13 @@ export async function renderHomePage(env): Promise<Response> {
             font-size: 1.5rem;
           }
           th, td {
-            padding: 0.5rem 0.75rem;
+            padding: 0.5rem 0.4rem;
             font-size: 0.9rem;
           }
           .bar {
             height: 14px;
-            min-width: 8px;
+            width: 2%;
+            min-width: 4px;
           }
         }
       </style>
