@@ -32,6 +32,8 @@ jobs:
           MONITOR_CONFIG_JSON = ${{ toJson(vars.MONITOR_CONFIG_JSON) }}
           TELEGRAM_BOT_TOKEN = "${{ secrets.TELEGRAM_BOT_TOKEN }}"
           TELEGRAM_CHAT_ID = "${{ secrets.TELEGRAM_CHAT_ID }}"
+          USERNAME = "${{ secrets.USERNAME }}"
+          PASSWORD = "${{ secrets.PASSWORD }}"
           EOF
 
       - name: Install Wrangler
