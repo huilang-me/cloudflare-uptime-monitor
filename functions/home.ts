@@ -125,15 +125,16 @@ export async function renderHomePage(env): Promise<Response> {
         }
 
         function showPopup(el) {
-          const hour = el.getAttribute('data-hour');
+          const hour = el.getAttribute('data-hour'); // 格式是 "YYYY-MM-DD HH"
           const siteName = el.getAttribute('data-siteName');
-
+        
           const [datePart, hourPart] = hour.split(' ');
           const [year, month, day] = datePart.split('-').map(Number);
           const hourNum = Number(hourPart);
-          const timeTs = Math.floor(new Date(year, month -1, day, hourNum).getTime() / 1000);
-
-          fetch('/log?name=' + encodeURIComponent(siteName) + '&time=' + encodeURIComponent(timeTs))
+          const fromTs = Math.floor(new Date(year, month - 1, day, hourNum).getTime() / 1000);
+          const toTs = fromTs + 3600;
+        
+          fetch('/log?name=' + encodeURIComponent(siteName) + '&from=' + fromTs + '&to=' + toTs)
             .then(res => res.json())
             .then(logs => {
               logs.sort((a, b) => a.timestamp - b.timestamp);
@@ -151,6 +152,7 @@ export async function renderHomePage(env): Promise<Response> {
               document.getElementById('overlay').style.display = 'block';
             });
         }
+
 
         function closePopup() {
           document.getElementById('popup').style.display = 'none';
