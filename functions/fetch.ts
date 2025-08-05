@@ -1,7 +1,8 @@
+// functions/fetch.ts
 import { parseConfig } from "../lib/config";
 import { checkAllSites } from "./check";
-import { runHealthCheck } from "../lib/healthcheck";
 import { handleAuth } from "../lib/auth";
+import { renderHomePage } from "./home";
 
 export const onRequest = async (request: Request, env, ctx) => {
   try {
@@ -9,17 +10,18 @@ export const onRequest = async (request: Request, env, ctx) => {
     const pathname = url.pathname;
     const redirectTarget = pathname + url.search;
 
-    // 如果配置了用户名和密码，做全站登录保护
+    // 登录认证（全站）
     if (env.USERNAME && env.PASSWORD) {
       const authResult = await handleAuth(request, env, redirectTarget);
       if (authResult) return authResult;
     }
 
-    // 登录通过或者没有配置密码，执行各路由逻辑
+    // 首页渲染监控概览
     if (pathname === "/") {
-      return await runHealthCheck(env);
+      return await renderHomePage(env);
     }
 
+    // 登出
     if (pathname === "/logout") {
       return new Response("已登出", {
         status: 302,
@@ -31,15 +33,16 @@ export const onRequest = async (request: Request, env, ctx) => {
       });
     }
 
-    if (pathname === `/check`) {
+    // 手动监控触发
+    if (pathname === `/${env.UUID}/check`) {
       const results = await checkAllSites(env, "manual");
       return new Response(JSON.stringify(results, null, 2), {
         headers: { "Content-Type": "application/json" },
       });
     }
 
-    // /log?name=xxx&limit=20
-    if (pathname === `/log`) {
+    // 日志查看
+    if (pathname === `/${env.UUID}/log`) {
       const { searchParams } = url;
       const name = searchParams.get("name");
       const limit = parseInt(searchParams.get("limit") || "20");
@@ -61,12 +64,13 @@ export const onRequest = async (request: Request, env, ctx) => {
       });
     }
 
-    // /info
-    if (pathname === `/info`) {
+    // 配置信息
+    if (pathname === `/${env.UUID}/info`) {
       return new Response(JSON.stringify({
+        uuid: env.UUID,
         config: parseConfig(env.MONITOR_CONFIG_JSON),
         telegram: {
-          tokenExists: env.TELEGRAM_BOT_TOKEN,
+          tokenExists: !!env.TELEGRAM_BOT_TOKEN,
           chatId: env.TELEGRAM_CHAT_ID,
         },
       }, null, 2), {
