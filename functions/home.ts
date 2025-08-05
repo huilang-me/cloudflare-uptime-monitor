@@ -42,6 +42,7 @@ export async function renderHomePage(env): Promise<Response> {
           height: 16px;
           border-radius: 2px;
           background-color: #ccc;
+          cursor: pointer;
         }
         .bar.ok {
           background-color: #16a34a;
@@ -51,6 +52,34 @@ export async function renderHomePage(env): Promise<Response> {
         }
         .bar:hover {
           outline: 1px solid #000;
+        }
+        .popup {
+          position: fixed;
+          top: 10%;
+          left: 50%;
+          transform: translateX(-50%);
+          background: #fff;
+          border: 1px solid #ccc;
+          box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+          padding: 1rem;
+          z-index: 1000;
+          max-height: 80vh;
+          overflow-y: auto;
+        }
+        .popup table {
+          width: 100%;
+          margin-top: 1rem;
+        }
+        .popup-close {
+          text-align: right;
+          margin-bottom: 1rem;
+        }
+        .overlay {
+          position: fixed;
+          top: 0; left: 0;
+          width: 100vw; height: 100vh;
+          background: rgba(0, 0, 0, 0.5);
+          z-index: 999;
         }
       </style>
     </head>
@@ -78,7 +107,8 @@ export async function renderHomePage(env): Promise<Response> {
   html += `
         </tbody>
       </table>
-
+      <div id="popup" class="popup" style="display:none;"></div>
+      <div id="overlay" class="overlay" style="display:none;" onclick="closePopup()"></div>
       <script>
         const now = new Date();
         const start = new Date(now.getTime() - 24 * 60 * 60 * 1000);
@@ -94,7 +124,30 @@ export async function renderHomePage(env): Promise<Response> {
         function getHourKey(dateStr) {
           const d = new Date(dateStr);
           d.setMinutes(0, 0, 0);
-          return d.getFullYear() + '-' + (d.getMonth()+1).toString().padStart(2, '0') + '-' + d.getDate().toString().padStart(2, '0') + ' ' + d.getHours().toString().padStart(2, '0') + ':00';
+          return d.getFullYear() + '-' + (d.getMonth()+1).toString().padStart(2, '0') + '-' + d.getDate().toString().padStart(2, '0') + ' ' + d.getHours().toString().padStart(2, '0');
+        }
+
+        function showPopup(time) {
+          fetch(`/log?time=${encodeURIComponent(time)}&limit=1000`)
+            .then(res => res.json())
+            .then(logs => {
+              let html = '<div class="popup-close"><button onclick="closePopup()">关闭</button></div>';
+              html += `<h3>${time}: 每个监控点状态</h3>`;
+              html += '<table><thead><tr><th>网站</th><th>时间</th><th>状态</th></tr></thead><tbody>';
+              logs.forEach(log => {
+                const color = log.status === 'up' ? 'green' : 'red';
+                html += `<tr><td>${log.name}</td><td>${new Date(log.timestamp).toLocaleTimeString()}</td><td style="color:${color}">${log.status}</td></tr>`;
+              });
+              html += '</tbody></table>';
+              document.getElementById('popup').innerHTML = html;
+              document.getElementById('popup').style.display = 'block';
+              document.getElementById('overlay').style.display = 'block';
+            });
+        }
+
+        function closePopup() {
+          document.getElementById('popup').style.display = 'none';
+          document.getElementById('overlay').style.display = 'none';
         }
 
         sites.forEach(name => {
@@ -117,7 +170,7 @@ export async function renderHomePage(env): Promise<Response> {
                 const hasFail = statuses.some(s => s !== 'up');
                 const cls = statuses.length === 0 ? '' : hasFail ? 'fail' : 'ok';
                 const title = key + (statuses.length === 0 ? ': 无数据' : hasFail ? ': 异常' : ': 正常');
-                bars.push('<div class="bar ' + cls + '" title="' + title + '"></div>');
+                bars.push('<div class="bar ' + cls + '" title="' + title + '" onclick="showPopup(\'' + key + '\')"></div>');
               }
 
               const container = document.getElementById('bar-' + name.replace(/[^a-zA-Z0-9]/g, ""));
