@@ -1,14 +1,13 @@
 import { parseConfig } from "../lib/config";
-import { getBeijingTimeISOString } from "../lib/time";
 import { sendTelegram } from "../lib/telegram";
 import { fetchWithTimeout } from "../lib/fetchWithTimeout";
 
 export async function checkAllSites(env, source = "scheduled") {
   const config = parseConfig(env.MONITOR_CONFIG_JSON);
-  const timestamp = getBeijingTimeISOString();
+  const timestamp = Math.floor(Date.now() / 1000); // 当前秒级时间戳
   const isScheduled = source === "scheduled";
   const results = [];
-  const MAX_LOG_AGE_MS = 1000 * 60 * 60 * 24 * 7 * 5; // 5 weeks
+  const MAX_LOG_AGE_SEC = 60 * 60 * 24 * 7 * 5; // 5 weeks in seconds
 
   for (const site of config) {
     const { name, url } = site;
@@ -55,7 +54,7 @@ export async function checkAllSites(env, source = "scheduled") {
     results.push({ name, status, statusCode, durationMs, headers });
   }
 
-  const cutoff = new Date(Date.now() - MAX_LOG_AGE_MS).toISOString();
+  const cutoff = timestamp - MAX_LOG_AGE_SEC;
   await env.DB.prepare("DELETE FROM logs WHERE timestamp < ?").bind(cutoff).run();
 
   return results;
