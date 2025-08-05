@@ -1,13 +1,39 @@
 // lib/auth.ts
+import { runHealthCheck } from "./healthcheck";
 
-export function getCookie(request: Request, name: string): string | null {
+function getCookie(request: Request, name: string): string | null {
   const cookie = request.headers.get("Cookie");
   if (!cookie) return null;
   const match = cookie.match(new RegExp(`(?:^|;\\s*)${name}=([^;]+)`));
   return match ? match[1] : null;
 }
 
+async function sign(value: string, secret: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const sig = await crypto.subtle.sign("HMAC", key, encoder.encode(value));
+  return btoa(String.fromCharCode(...new Uint8Array(sig)))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+}
+
+async function verifySignature(value: string, signature: string, secret: string): Promise<boolean> {
+  const expected = await sign(value, secret);
+  return expected === signature;
+}
+
 function renderLoginPage(message = "", redirect = "/"): Response {
+  const healthMsg = message
+    ? `<pre style="color:red;white-space:pre-wrap;margin-bottom:1em;">${message}</pre>`
+    : "";
+
   return new Response(`
     <!DOCTYPE html>
     <html lang="zh">
@@ -61,17 +87,12 @@ function renderLoginPage(message = "", redirect = "/"): Response {
         button:hover {
           background-color: #1d4ed8;
         }
-        .error {
-          color: red;
-          margin-bottom: 1rem;
-          text-align: center;
-        }
       </style>
     </head>
     <body>
       <div class="login-container">
+        ${healthMsg}
         <h2>登录验证</h2>
-        ${message ? `<div class="error">${message}</div>` : ""}
         <form method="POST" action="?redirect=${encodeURIComponent(redirect)}">
           <label for="username">用户名</label>
           <input type="text" id="username" name="username" required />
@@ -87,41 +108,21 @@ function renderLoginPage(message = "", redirect = "/"): Response {
   });
 }
 
-async function sign(value: string, secret: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const key = await crypto.subtle.importKey(
-    "raw",
-    encoder.encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"]
-  );
-  const sig = await crypto.subtle.sign("HMAC", key, encoder.encode(value));
-  // base64url encoding (no padding, +/ replaced)
-  return btoa(String.fromCharCode(...new Uint8Array(sig)))
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "");
-}
-
-async function verifySignature(value: string, signature: string, secret: string): Promise<boolean> {
-  const expected = await sign(value, secret);
-  return expected === signature;
-}
-
 export async function handleAuth(request: Request, env, redirectTo: string): Promise<Response | null> {
   const method = request.method;
-  const cookie = getCookie(request, "auth");
 
+  const healthCheckMsg = await runHealthCheck(env);
+  if (healthCheckMsg) {
+    return renderLoginPage(healthCheckMsg, redirectTo);
+  }
+
+  const cookie = getCookie(request, "auth");
   if (cookie) {
     const [username, timestampStr, signature] = cookie.split(".");
-    if (!username || !timestampStr || !signature) {
-      // 格式不对，忽略
-    } else {
+    if (username && timestampStr && signature) {
       const value = `${username}.${timestampStr}`;
       const valid = await verifySignature(value, signature, env.SESSION_SECRET);
-      const timestamp = parseInt(timestampStr, 10);
-      const expired = (Date.now() / 1000 - timestamp) > 3600; // 1小时过期
+      const expired = (Date.now() / 1000 - parseInt(timestampStr, 10)) > 3600;
       if (valid && !expired) return null;
     }
   }
@@ -148,6 +149,5 @@ export async function handleAuth(request: Request, env, redirectTo: string): Pro
     }
   }
 
-  // GET 请求 显示登录页
   return renderLoginPage("", redirectTo);
 }
