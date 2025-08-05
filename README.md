@@ -197,6 +197,3 @@ https://your-project.workers.dev/UUID/info
 
 本项目采用 MIT License，欢迎自由使用和修改。
 
----
-
-如需更多帮助或示例配置，可参考 [Cloudflare 官方文档](https://developers.cloudflare.com/workers/) 或联系作者。
