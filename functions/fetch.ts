@@ -68,7 +68,7 @@ export const onRequest = async (request: Request, env, ctx) => {
         // 没传任何参数，默认查最近1小时所有网站
         const now = new Date();
         const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
-        conditions.push("timestamp >= ?");
+        conditions.push("timestamp >= datetime(?, 'localtime')");
         binds.push(oneHourAgo.toISOString());
       }
     
