@@ -1,4 +1,4 @@
-// /lib/auth.ts
+// lib/auth.ts
 
 export function getCookie(request: Request, name: string): string | null {
   const cookie = request.headers.get("Cookie");
@@ -7,7 +7,7 @@ export function getCookie(request: Request, name: string): string | null {
   return match ? match[1] : null;
 }
 
-function renderLoginPage(message = ""): Response {
+function renderLoginPage(message = "", redirect = "/"): Response {
   return new Response(`
     <!DOCTYPE html>
     <html lang="zh">
@@ -72,7 +72,7 @@ function renderLoginPage(message = ""): Response {
       <div class="login-container">
         <h2>登录验证</h2>
         ${message ? `<div class="error">${message}</div>` : ""}
-        <form method="POST">
+        <form method="POST" action="?redirect=${encodeURIComponent(redirect)}">
           <label for="username">用户名</label>
           <input type="text" id="username" name="username" required />
           <label for="password">密码</label>
@@ -97,7 +97,11 @@ async function sign(value: string, secret: string): Promise<string> {
     ["sign"]
   );
   const sig = await crypto.subtle.sign("HMAC", key, encoder.encode(value));
-  return btoa(String.fromCharCode(...new Uint8Array(sig))).replace(/=+$/, "");
+  // base64url encoding (no padding, +/ replaced)
+  return btoa(String.fromCharCode(...new Uint8Array(sig)))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
 }
 
 async function verifySignature(value: string, signature: string, secret: string): Promise<boolean> {
@@ -105,41 +109,45 @@ async function verifySignature(value: string, signature: string, secret: string)
   return expected === signature;
 }
 
-export async function handleAuth(request: Request, env): Promise<Response | null> {
+export async function handleAuth(request: Request, env, redirectTo: string): Promise<Response | null> {
   const method = request.method;
   const cookie = getCookie(request, "auth");
 
   if (cookie) {
-    const [username, timestamp, signature] = cookie.split(".");
-    const value = `${username}.${timestamp}`;
-    const valid = await verifySignature(value, signature, env.SESSION_SECRET);
-    const expired = (Date.now() / 1000 - parseInt(timestamp)) > 3600;
-    if (valid && !expired) return null;
-  }
-
-  if (method === "POST") {
-    const contentType = request.headers.get("content-type") || "";
-    if (contentType.includes("application/x-www-form-urlencoded") || contentType.includes("multipart/form-data")) {
-      const formData = await request.formData();
-      const inputUsername = formData.get("username");
-      const inputPassword = formData.get("password");
-
-      if (inputUsername === env.USERNAME && inputPassword === env.PASSWORD) {
-        const timestamp = Math.floor(Date.now() / 1000).toString();
-        const value = `${inputUsername}.${timestamp}`;
-        const signature = await sign(value, env.SESSION_SECRET);
-        const cookieValue = `${value}.${signature}`;
-        return new Response(`<html><body>登录成功，<a href="/">点击进入首页</a></body></html>`, {
-          headers: {
-            "Set-Cookie": `auth=${cookieValue}; Path=/; HttpOnly; Max-Age=3600`,
-            "Content-Type": "text/html; charset=utf-8",
-          },
-        });
-      } else {
-        return renderLoginPage("用户名或密码错误");
-      }
+    const [username, timestampStr, signature] = cookie.split(".");
+    if (!username || !timestampStr || !signature) {
+      // 格式不对，忽略
+    } else {
+      const value = `${username}.${timestampStr}`;
+      const valid = await verifySignature(value, signature, env.SESSION_SECRET);
+      const timestamp = parseInt(timestampStr, 10);
+      const expired = (Date.now() / 1000 - timestamp) > 3600; // 1小时过期
+      if (valid && !expired) return null;
     }
   }
 
-  return renderLoginPage();
+  if (method === "POST") {
+    const formData = await request.formData();
+    const inputUsername = formData.get("username");
+    const inputPassword = formData.get("password");
+
+    if (inputUsername === env.USERNAME && inputPassword === env.PASSWORD) {
+      const timestamp = Math.floor(Date.now() / 1000).toString();
+      const value = `${inputUsername}.${timestamp}`;
+      const signature = await sign(value, env.SESSION_SECRET);
+      const cookieValue = `${value}.${signature}`;
+      return new Response(null, {
+        status: 302,
+        headers: {
+          "Set-Cookie": `auth=${cookieValue}; Path=/; HttpOnly; Max-Age=3600`,
+          "Location": redirectTo || "/",
+        },
+      });
+    } else {
+      return renderLoginPage("用户名或密码错误", redirectTo);
+    }
+  }
+
+  // GET 请求 显示登录页
+  return renderLoginPage("", redirectTo);
 }
