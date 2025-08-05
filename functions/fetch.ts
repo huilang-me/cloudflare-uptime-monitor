@@ -3,6 +3,7 @@ import { parseConfig } from "../lib/config";
 import { checkAllSites } from "./check";
 import { handleAuth } from "../lib/auth";
 import { renderHomePage } from "./home";
+import { handleLogRequest } from "./log";
 
 export const onRequest = async (request: Request, env, ctx) => {
   try {
@@ -38,56 +39,7 @@ export const onRequest = async (request: Request, env, ctx) => {
     }
 
     if (pathname === "/log") {
-      const { searchParams } = url;
-      const name = searchParams.get("name");
-      const time = searchParams.get("time");
-      const from = searchParams.get("from");
-      const to = searchParams.get("to");
-      const limit = parseInt(searchParams.get("limit") || "0");
-    
-      let query = `
-        SELECT name, status, timestamp, scheduled, duration_ms 
-        FROM logs`;
-      const binds = [];
-      const conditions = [];
-    
-      if (name) {
-        conditions.push("name = ?");
-        binds.push(name);
-      }
-    
-      if (time) {
-        // 查询某小时
-        conditions.push("strftime('%Y-%m-%d %H', timestamp, 'localtime') = ?");
-        binds.push(time);
-      } else if (from && to) {
-        // 查询时间区间
-        conditions.push("timestamp >= ? AND timestamp <= ?");
-        binds.push(from, to);
-      } else if (!name && !time && !from && !to) {
-        // 没传任何参数，默认查最近1小时所有网站
-        const now = new Date();
-        const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
-        conditions.push("timestamp >= datetime(?, 'localtime')");
-        binds.push(oneHourAgo.toISOString());
-      }
-    
-      if (conditions.length > 0) {
-        query += " WHERE " + conditions.join(" AND ");
-      }
-    
-      query += " ORDER BY timestamp ASC";
-    
-      if (limit > 0) {
-        query += " LIMIT ?";
-        binds.push(limit);
-      }
-    
-      const logs = await env.DB.prepare(query).bind(...binds).all();
-    
-      return new Response(JSON.stringify(logs.results, null, 2), {
-        headers: { "Content-Type": "application/json" },
-      });
+      return await handleLogRequest(request, env);
     }
 
     if (pathname === "/info") {
