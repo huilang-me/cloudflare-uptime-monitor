@@ -1,4 +1,4 @@
-// functions/fetch.ts
+// fetch.ts
 import { parseConfig } from "../lib/config";
 import { checkAllSites } from "./check";
 import { handleAuth } from "../lib/auth";
@@ -10,18 +10,15 @@ export const onRequest = async (request: Request, env, ctx) => {
     const pathname = url.pathname;
     const redirectTarget = pathname + url.search;
 
-    // 登录认证（全站）
     if (env.USERNAME && env.PASSWORD) {
       const authResult = await handleAuth(request, env, redirectTarget);
       if (authResult) return authResult;
     }
 
-    // 首页渲染监控概览
     if (pathname === "/") {
       return await renderHomePage(env);
     }
 
-    // 登出
     if (pathname === "/logout") {
       return new Response("已登出", {
         status: 302,
@@ -33,26 +30,33 @@ export const onRequest = async (request: Request, env, ctx) => {
       });
     }
 
-    // 手动监控触发
-    if (pathname === `/check`) {
+    if (pathname === "/check") {
       const results = await checkAllSites(env, "manual");
       return new Response(JSON.stringify(results, null, 2), {
         headers: { "Content-Type": "application/json" },
       });
     }
 
-    // 日志查看
-    if (pathname === `/log`) {
+    if (pathname === "/log") {
       const { searchParams } = url;
       const name = searchParams.get("name");
-      const limit = parseInt(searchParams.get("limit") || "20");
+      const limit = parseInt(searchParams.get("limit") || "500");
+      const time = searchParams.get("time");
 
       let query = "SELECT name, status, timestamp, scheduled, duration_ms FROM logs";
       const binds = [];
 
+      const conditions = [];
       if (name) {
-        query += " WHERE name = ?";
+        conditions.push("name = ?");
         binds.push(name);
+      }
+      if (time) {
+        conditions.push("strftime('%Y-%m-%d %H', timestamp, 'localtime') = ?");
+        binds.push(time);
+      }
+      if (conditions.length > 0) {
+        query += " WHERE " + conditions.join(" AND ");
       }
       query += " ORDER BY timestamp DESC LIMIT ?";
       binds.push(limit);
@@ -64,9 +68,9 @@ export const onRequest = async (request: Request, env, ctx) => {
       });
     }
 
-    // 配置信息
-    if (pathname === `/info`) {
+    if (pathname === "/info") {
       return new Response(JSON.stringify({
+        uuid: env.UUID,
         config: parseConfig(env.MONITOR_CONFIG_JSON),
         telegram: {
           tokenExists: !!env.TELEGRAM_BOT_TOKEN,
