@@ -29,14 +29,21 @@ export async function runHealthCheck(env): Promise<Response> {
   }
   checks.push(dbCheck);
 
-  // 3. UUID
+  // 3. USERNAME
   checks.push({
-    name: "UUID",
-    ok: typeof env.UUID === "string" && env.UUID.length > 0,
-    details: env.UUID ? "存在" : "未设置",
+    name: "USERNAME",
+    ok: typeof env.USERNAME === "string" && env.USERNAME.length > 0,
+    details: env.USERNAME ? "存在" : "未设置",
   });
 
-  // 4. TELEGRAM
+  // 4. PASSWORD
+  checks.push({
+    name: "PASSWORD",
+    ok: typeof env.PASSWORD === "string" && env.PASSWORD.length > 0,
+    details: env.PASSWORD ? "存在" : "未设置",
+  });
+
+  // 5. TELEGRAM
   checks.push({
     name: "TELEGRAM_BOT_TOKEN",
     ok: !!env.TELEGRAM_BOT_TOKEN,
@@ -62,9 +69,13 @@ export async function runHealthCheck(env): Promise<Response> {
         suggestions.DB =
           "请确认你在 wrangler.toml 中绑定了 D1 数据库，例如：[[d1_databases]] binding = \"DB\" database_name = \"your-db\"";
         break;
-      case "UUID":
-        suggestions.UUID =
-          "请在 GitHub 仓库的 Actions 环境变量中设置 UUID，例如随机字符串: e2cf3c1d-xxxx-xxxx-xxxx-xxxxxxxxxxxx";
+      case "USERNAME":
+        suggestions.USERNAME =
+          "请在 GitHub 仓库的 Actions 环境变量中设置 USERNAME，例如：admin";
+        break;
+      case "PASSWORD":
+        suggestions.PASSWORD =
+          "请在 GitHub 仓库的 Actions 环境变量中设置 PASSWORD，例如：your_password";
         break;
       case "TELEGRAM_BOT_TOKEN":
         suggestions.TELEGRAM_BOT_TOKEN =
