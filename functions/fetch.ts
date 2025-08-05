@@ -34,7 +34,7 @@ export const onRequest = async (request: Request, env, ctx) => {
     }
 
     // 手动监控触发
-    if (pathname === `/${env.UUID}/check`) {
+    if (pathname === `/check`) {
       const results = await checkAllSites(env, "manual");
       return new Response(JSON.stringify(results, null, 2), {
         headers: { "Content-Type": "application/json" },
@@ -42,7 +42,7 @@ export const onRequest = async (request: Request, env, ctx) => {
     }
 
     // 日志查看
-    if (pathname === `/${env.UUID}/log`) {
+    if (pathname === `/log`) {
       const { searchParams } = url;
       const name = searchParams.get("name");
       const limit = parseInt(searchParams.get("limit") || "20");
@@ -65,9 +65,8 @@ export const onRequest = async (request: Request, env, ctx) => {
     }
 
     // 配置信息
-    if (pathname === `/${env.UUID}/info`) {
+    if (pathname === `/info`) {
       return new Response(JSON.stringify({
-        uuid: env.UUID,
         config: parseConfig(env.MONITOR_CONFIG_JSON),
         telegram: {
           tokenExists: !!env.TELEGRAM_BOT_TOKEN,
