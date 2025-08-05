@@ -1,27 +1,48 @@
+// functions/fetch.ts
 import { parseConfig } from "../lib/config";
 import { checkAllSites } from "./check";
-import { runHealthCheck } from "../lib/healthcheck";
+import { handleAuth } from "../lib/auth";
+import { renderHomePage } from "./home";
 
 export const onRequest = async (request: Request, env, ctx) => {
   try {
     const url = new URL(request.url);
-    const pathname = url.pathname.slice(1);
+    const pathname = url.pathname;
+    const redirectTarget = pathname + url.search;
 
-    // 👉 自检 /
-    if (pathname === "") {
-      return await runHealthCheck(env);
+    // 登录认证（全站）
+    if (env.USERNAME && env.PASSWORD) {
+      const authResult = await handleAuth(request, env, redirectTarget);
+      if (authResult) return authResult;
     }
 
-    // 👉 手动触发监控
-    if (pathname === `${env.UUID}/check`) {
+    // 首页渲染监控概览
+    if (pathname === "/") {
+      return await renderHomePage(env);
+    }
+
+    // 登出
+    if (pathname === "/logout") {
+      return new Response("已登出", {
+        status: 302,
+        headers: {
+          "Set-Cookie": "auth=; Path=/; Max-Age=0",
+          "Location": "/",
+          "Content-Type": "text/plain",
+        },
+      });
+    }
+
+    // 手动监控触发
+    if (pathname === `/check`) {
       const results = await checkAllSites(env, "manual");
       return new Response(JSON.stringify(results, null, 2), {
         headers: { "Content-Type": "application/json" },
       });
     }
 
-    // 👉 查看日志 /UUID/log?name=xxx&limit=20
-    if (pathname === `${env.UUID}/log`) {
+    // 日志查看
+    if (pathname === `/log`) {
       const { searchParams } = url;
       const name = searchParams.get("name");
       const limit = parseInt(searchParams.get("limit") || "20");
@@ -43,10 +64,9 @@ export const onRequest = async (request: Request, env, ctx) => {
       });
     }
 
-    // 👉 查看配置信息 /UUID/info
-    if (pathname === `${env.UUID}/info`) {
+    // 配置信息
+    if (pathname === `/info`) {
       return new Response(JSON.stringify({
-        uuid: env.UUID,
         config: parseConfig(env.MONITOR_CONFIG_JSON),
         telegram: {
           tokenExists: !!env.TELEGRAM_BOT_TOKEN,
@@ -58,6 +78,7 @@ export const onRequest = async (request: Request, env, ctx) => {
     }
 
     return new Response("请输入正确的参数访问", { status: 200 });
+
   } catch (e) {
     return new Response(`Worker error: ${e.message}`, { status: 500 });
   }

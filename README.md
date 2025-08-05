@@ -23,7 +23,7 @@
 
 ---
 
-### 🏗️ Step 2: 新建 D1 数据库（优先）
+### 🏗️ Step 2: 新建 D1 数据库
 
 登录 [Cloudflare Dashboard](https://dash.cloudflare.com/) → 选择你的账号 → `存储和数据库` → `D1` → 创建数据库：
 
@@ -57,48 +57,32 @@
 
 进入你的 GitHub 仓库页面：
 
-→ `Settings > Secrets and variables > Actions > Variables`
+→ `Settings > Secrets and variables > Actions`
 
 添加如下配置项：
 
-| 名称                      | 类型       | 示例值                                                                                             |
+| 名称                     | 类型     | 示例值                                                                                          |
 | ----------------------- | -------- | ----------------------------------------------------------------------------------------------- |
-| `CLOUDFLARE_ACCOUNT_ID` | Variable | `f81d30xxxxxxxxxxxxxxxxxxxxxx`                                                                  |
+| `CLOUDFLARE_ACCOUNT_ID` | Secret   | `f81d30xxxxxxxxxxxxxxxxxxxxxx`                                                                  |
 | `CLOUDFLARE_API_TOKEN`  | Secret   | `xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`                                                              |
-| `UUID`                  | Variable | `e2cf3c1d-xxxx-xxxx-xxxx-xxxxxxxxxxxx`（可用 `uuidgen` 生成）                                         |
-| `MONITOR_CONFIG_JSON`   | Variable | `[{"name":"example","url":"https://example.com"},{"name":"google","url":"https://google.com"}]` |
 | `TELEGRAM_BOT_TOKEN`    | Secret   | `123456789:ABCxxxxxxxxxxxxxxxxxxxxxxxx`                                                         |
 | `TELEGRAM_CHAT_ID`      | Secret   | `-1001234567890`                                                                                |
-| `D1_DATABASE_NAME`      | Variable | `uptime-monitor`（你创建的 D1 名称）                                                                    |
+| `UUID`                  | Secret   | `e2cf3c1d-xxxx-xxxx-xxxx-xxxxxxxxxxxx`（可用 `uuidgen` 生成）                                    |
+| `MONITOR_CONFIG_JSON`   | Variable | `[{"name":"example","url":"https://example.com"},{"name":"google","url":"https://google.com"}]` |
+| `D1_DATABASE_NAME`      | Variable | `uptime-monitor`（你创建的 D1 名称）                                                             |
 | `D1_DATABASE_ID`        | Variable | `7d08819d-xxxx-xxxx-xxxx-xxxxxxxxxxxx`                                                          |
 
 ---
 
 ### 🛠️ Step 5: 初始化 D1 数据库结构
 
-在 D1 控制台粘贴执行 `schema.sql` 中的内容，或使用 CLI：
-
-```bash
-npx wrangler d1 execute <D1_DATABASE_NAME> --file=./schema.sql
-```
+在 D1 控制台粘贴执行 `schema.sql` 中的内容
 
 ---
 
 ### ☁️ Step 6: 启用并部署 GitHub Actions
 
-提交代码推送到 GitHub，触发自动部署：
-
-```bash
-git add .
-git commit -m "init"
-git push origin main
-```
-
-或本地手动部署：
-
-```bash
-npx wrangler deploy
-```
+提交代码推送到 GitHub，触发自动部署
 
 ---
 
@@ -168,6 +152,10 @@ https://your-project.workers.dev/UUID/info
 
 ## 🛠️ 常见问题 FAQ
 
+### Q：自动部署失败
+
+* 在github项目Actions中查看Deploy to Cloudflare Workers的具体信息，根据日志排查
+
 ### Q: 如何调试定时任务？
 
 * 在 \[Cloudflare Dashboard > Workers & D1 > Cron Triggers] 可查看执行日志
@@ -209,6 +197,3 @@ https://your-project.workers.dev/UUID/info
 
 本项目采用 MIT License，欢迎自由使用和修改。
 
----
-
-如需更多帮助或示例配置，可参考 [Cloudflare 官方文档](https://developers.cloudflare.com/workers/) 或联系作者。
