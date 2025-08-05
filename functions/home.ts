@@ -130,6 +130,9 @@ export async function renderHomePage(env): Promise<Response> {
                 const logHour = getHourKey(log.timestamp);
                 return logHour === hour;
               });
+              // 升序排序
+              logsInHour.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+  
               let html = '<div class="popup-close"><button onclick="closePopup()">关闭</button></div>';
               html += '<h3>' + hour + ' - ' + siteName + ' 状态详情</h3>';
               html += '<div class="status-bar">';
