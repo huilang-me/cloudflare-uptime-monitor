@@ -164,7 +164,9 @@ export async function renderHomePage(env): Promise<Response> {
                 const hasFail = statuses.some(s => s !== 'up');
                 const cls = statuses.length === 0 ? '' : hasFail ? 'fail' : 'ok';
                 const title = key + (statuses.length === 0 ? ': 无数据' : hasFail ? ': 异常' : ': 正常');
-                bars.push('<div class=&quot;bar ' + cls + '&quot; title=&quot;' + title + '&quot; onclick=&quot;showPopup(\\\'' + key + '\\\', \\\'' + name + '\\\')&quot;></div>');
+                //bars.push('<div class="bar ' + cls + '" title="' + title + '" onclick="showPopup(\\'' + key + '\\', \\' + siteName + '\\')"></div>');
+                bars.push('<div class="bar ' + cls + '" title="' + title + '" onclick="showPopup(\\'' + key + '\\')"></div>');
+
               }
 
               const container = document.getElementById('bar-' + name.replace(/[^a-zA-Z0-9]/g, ""));
