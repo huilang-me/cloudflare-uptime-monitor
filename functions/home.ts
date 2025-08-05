@@ -96,12 +96,11 @@ export async function renderHomePage(env): Promise<Response> {
   `;
 
   for (const site of config) {
-    html += `
+    html += '
       <tr>
-        <td><a href="${site.url}" target="_blank">${site.name}</a></td>
-        <td><div class="status-bar" id="bar-${site.name.replace(/[^a-zA-Z0-9]/g, "")}">加载中...</div></td>
-      </tr>
-    `;
+        <td><a href="' + site.url + '" target="_blank">' + site.name + '</a></td>
+        <td><div class="status-bar" id="bar-' + site.name.replace(/[^a-zA-Z0-9]/g, "") + '">加载中...</div></td>
+      </tr>';
   }
 
   html += `
@@ -113,13 +112,7 @@ export async function renderHomePage(env): Promise<Response> {
         const now = new Date();
         const start = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
-        const sites = ${JSON.stringify(config.map(site => site.name))};
-
-        function formatHour(dateStr) {
-          const d = new Date(dateStr);
-          d.setMinutes(0, 0, 0);
-          return d.toLocaleString('zh-CN', { hour: '2-digit', hour12: false });
-        }
+        const sites = ` + JSON.stringify(config.map(site => site.name)) + `;
 
         function getHourKey(dateStr) {
           const d = new Date(dateStr);
@@ -129,14 +122,14 @@ export async function renderHomePage(env): Promise<Response> {
 
         function showPopup(time) {
           fetch('/log?time=' + encodeURIComponent(time) + '&limit=1000')
-            .then(res => res.json())
-            .then(logs => {
-              let html = '<div class="popup-close"><button onclick="closePopup()">关闭</button></div>';
-              html += `<h3>${time}: 每个监控点状态</h3>`;
+            .then(function(res) { return res.json(); })
+            .then(function(logs) {
+              var html = '<div class="popup-close"><button onclick="closePopup()">关闭</button></div>';
+              html += '<h3>' + time + ': 每个监控点状态</h3>';
               html += '<table><thead><tr><th>网站</th><th>时间</th><th>状态</th></tr></thead><tbody>';
-              logs.forEach(log => {
-                const color = log.status === 'up' ? 'green' : 'red';
-                html += `<tr><td>${log.name}</td><td>${new Date(log.timestamp).toLocaleTimeString()}</td><td style="color:${color}">${log.status}</td></tr>`;
+              logs.forEach(function(log) {
+                var color = log.status === 'up' ? 'green' : 'red';
+                html += '<tr><td>' + log.name + '</td><td>' + new Date(log.timestamp).toLocaleTimeString() + '</td><td style="color:' + color + '">' + log.status + '</td></tr>';
               });
               html += '</tbody></table>';
               document.getElementById('popup').innerHTML = html;
@@ -150,30 +143,30 @@ export async function renderHomePage(env): Promise<Response> {
           document.getElementById('overlay').style.display = 'none';
         }
 
-        sites.forEach(name => {
+        sites.forEach(function(name) {
           fetch('/log?name=' + encodeURIComponent(name) + '&limit=500')
-            .then(res => res.json())
-            .then(logs => {
-              const hourMap = {};
-              logs.forEach(log => {
-                const key = getHourKey(log.timestamp);
+            .then(function(res) { return res.json(); })
+            .then(function(logs) {
+              var hourMap = {};
+              logs.forEach(function(log) {
+                var key = getHourKey(log.timestamp);
                 if (!hourMap[key]) hourMap[key] = [];
                 hourMap[key].push(log.status);
               });
 
-              const bars = [];
-              for (let i = 23; i >= 0; i--) {
-                const d = new Date(now.getTime() - i * 60 * 60 * 1000);
+              var bars = [];
+              for (var i = 23; i >= 0; i--) {
+                var d = new Date(now.getTime() - i * 60 * 60 * 1000);
                 d.setMinutes(0, 0, 0);
-                const key = getHourKey(d.toISOString());
-                const statuses = hourMap[key] || [];
-                const hasFail = statuses.some(s => s !== 'up');
-                const cls = statuses.length === 0 ? '' : hasFail ? 'fail' : 'ok';
-                const title = key + (statuses.length === 0 ? ': 无数据' : hasFail ? ': 异常' : ': 正常');
+                var key = getHourKey(d.toISOString());
+                var statuses = hourMap[key] || [];
+                var hasFail = statuses.some(function(s) { return s !== 'up'; });
+                var cls = statuses.length === 0 ? '' : hasFail ? 'fail' : 'ok';
+                var title = key + (statuses.length === 0 ? ': 无数据' : hasFail ? ': 异常' : ': 正常');
                 bars.push('<div class="bar ' + cls + '" title="' + title + '" onclick="showPopup(\'' + key + '\')"></div>');
               }
 
-              const container = document.getElementById('bar-' + name.replace(/[^a-zA-Z0-9]/g, ""));
+              var container = document.getElementById('bar-' + name.replace(/[^a-zA-Z0-9]/g, ""));
               container.innerHTML = bars.join('');
             });
         });
