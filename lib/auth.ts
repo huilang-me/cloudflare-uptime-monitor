@@ -29,7 +29,7 @@ async function verifySignature(value: string, signature: string, secret: string)
   return expected === signature;
 }
 
-function renderLoginPage(message = "", redirect = "/"): Response {
+function renderLoginPage(message = ""): Response {
   const healthMsg = message
     ? `<pre style="color:red;white-space:pre-wrap;margin-bottom:1em;">${message}</pre>`
     : "";
@@ -93,7 +93,7 @@ function renderLoginPage(message = "", redirect = "/"): Response {
       <div class="login-container">
         ${healthMsg}
         <h2>登录验证</h2>
-        <form method="POST" action="?redirect=${encodeURIComponent(redirect)}">
+        <form method="POST">
           <label for="username">用户名</label>
           <input type="text" id="username" name="username" required />
           <label for="password">密码</label>
@@ -108,14 +108,16 @@ function renderLoginPage(message = "", redirect = "/"): Response {
   });
 }
 
-export async function handleAuth(request: Request, env, redirectTo: string): Promise<Response | null> {
+export async function handleAuth(request: Request, env): Promise<Response | null> {
   const method = request.method;
 
+  // 系统配置检查（如出错，显示提示）
   const healthCheckMsg = await runHealthCheck(env);
   if (healthCheckMsg) {
-    return renderLoginPage(healthCheckMsg, redirectTo);
+    return renderLoginPage(healthCheckMsg);
   }
 
+  // 校验 Cookie
   const cookie = getCookie(request, "auth");
   if (cookie) {
     const [username, timestampStr, signature] = cookie.split(".");
@@ -127,6 +129,7 @@ export async function handleAuth(request: Request, env, redirectTo: string): Pro
     }
   }
 
+  // 登录处理
   if (method === "POST") {
     const formData = await request.formData();
     const inputUsername = formData.get("username");
@@ -141,13 +144,14 @@ export async function handleAuth(request: Request, env, redirectTo: string): Pro
         status: 302,
         headers: {
           "Set-Cookie": `auth=${cookieValue}; Path=/; HttpOnly; Max-Age=3600`,
-          "Location": redirectTo || "/",
+          "Location": "/", // 登录成功跳转首页
         },
       });
     } else {
-      return renderLoginPage("用户名或密码错误", redirectTo);
+      return renderLoginPage("用户名或密码错误");
     }
   }
 
-  return renderLoginPage("", redirectTo);
+  // 初始显示登录页
+  return renderLoginPage();
 }
