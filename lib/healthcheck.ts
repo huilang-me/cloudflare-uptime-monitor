@@ -1,6 +1,6 @@
 import { parseConfig } from "./config";
 
-export async function runHealthCheck(env): Promise<Response> {
+export async function runHealthCheck(env): Promise<string> {
   const checks = [];
 
   // 1. 检查 MONITOR_CONFIG_JSON
@@ -55,45 +55,15 @@ export async function runHealthCheck(env): Promise<Response> {
     details: env.TELEGRAM_CHAT_ID ? "存在" : "未设置",
   });
 
-  // ⚠️ 构建建议项
-  const suggestions = {};
-  for (const check of checks) {
-    if (check.ok) continue;
+  // 收集所有不通过的检查，准备提示文本
+  const failedChecks = checks.filter(c => !c.ok);
 
-    switch (check.name) {
-      case "MONITOR_CONFIG_JSON":
-        suggestions.MONITOR_CONFIG_JSON =
-          "请在 GitHub 仓库的 Settings > Secrets and variables > Actions > Variables 中设置 MONITOR_CONFIG_JSON，例如：[{\"name\":\"example\",\"url\":\"https://example.com\"}]";
-        break;
-      case "DB":
-        suggestions.DB =
-          "请确认你在 wrangler.toml 中绑定了 D1 数据库，例如：[[d1_databases]] binding = \"DB\" database_name = \"your-db\"";
-        break;
-      case "USERNAME":
-        suggestions.USERNAME =
-          "请在 GitHub 仓库的 Actions 环境变量中设置 USERNAME，例如：admin";
-        break;
-      case "PASSWORD":
-        suggestions.PASSWORD =
-          "请在 GitHub 仓库的 Actions 环境变量中设置 PASSWORD，例如：your_password";
-        break;
-      case "TELEGRAM_BOT_TOKEN":
-        suggestions.TELEGRAM_BOT_TOKEN =
-          "请在 GitHub Secrets 中设置 TELEGRAM_BOT_TOKEN，值为你的 Telegram Bot Token";
-        break;
-      case "TELEGRAM_CHAT_ID":
-        suggestions.TELEGRAM_CHAT_ID =
-          "请在 GitHub Secrets 中设置 TELEGRAM_CHAT_ID，值为你的 Telegram chat ID";
-        break;
-    }
+  if (failedChecks.length === 0) return ""; // 全部通过，返回空字符串
+
+  let msg = "配置检查未通过，请注意以下项：\n";
+  for (const check of failedChecks) {
+    msg += `- ${check.name}: ${check.details}\n`;
   }
 
-  const response = { status: "Config Check", checks };
-  if (Object.keys(suggestions).length > 0) {
-    response["suggestions"] = suggestions;
-  }
-
-  return new Response(JSON.stringify(response, null, 2), {
-    headers: { "Content-Type": "application/json" },
-  });
+  return msg;
 }
