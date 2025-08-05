@@ -66,13 +66,23 @@ function renderLoginPage(message = ""): Response {
           margin-bottom: 0.5rem;
           font-weight: bold;
         }
-        input {
+        input[type="text"],
+        input[type="password"] {
           width: 100%;
           padding: 0.5rem;
-          margin-bottom: 1.25rem;
+          margin-bottom: 1rem;
           border: 1px solid #ccc;
           border-radius: 4px;
           font-size: 1rem;
+        }
+        .checkbox-label {
+          display: flex;
+          align-items: center;
+          margin-bottom: 1.25rem;
+          font-weight: normal;
+        }
+        .checkbox-label input {
+          margin-right: 0.5rem;
         }
         button {
           width: 100%;
@@ -98,6 +108,10 @@ function renderLoginPage(message = ""): Response {
           <input type="text" id="username" name="username" required />
           <label for="password">密码</label>
           <input type="password" id="password" name="password" required />
+          <label class="checkbox-label">
+            <input type="checkbox" id="remember" name="remember" />
+            记住我（7天免登录）
+          </label>
           <button type="submit">登录</button>
         </form>
       </div>
@@ -124,7 +138,8 @@ export async function handleAuth(request: Request, env): Promise<Response | null
     if (username && timestampStr && signature) {
       const value = `${username}.${timestampStr}`;
       const valid = await verifySignature(value, signature, env.SESSION_SECRET);
-      const expired = (Date.now() / 1000 - parseInt(timestampStr, 10)) > 3600;
+      const age = Date.now() / 1000 - parseInt(timestampStr, 10);
+      const expired = age > 604800; // 最长 7 天有效
       if (valid && !expired) return null;
     }
   }
@@ -134,6 +149,8 @@ export async function handleAuth(request: Request, env): Promise<Response | null
     const formData = await request.formData();
     const inputUsername = formData.get("username");
     const inputPassword = formData.get("password");
+    const rememberMe = formData.get("remember") === "on";
+    const maxAge = rememberMe ? 604800 : 3600;
 
     if (inputUsername === env.USERNAME && inputPassword === env.PASSWORD) {
       const timestamp = Math.floor(Date.now() / 1000).toString();
@@ -143,7 +160,7 @@ export async function handleAuth(request: Request, env): Promise<Response | null
       return new Response(null, {
         status: 302,
         headers: {
-          "Set-Cookie": `auth=${cookieValue}; Path=/; HttpOnly; Max-Age=3600`,
+          "Set-Cookie": `auth=${cookieValue}; Path=/; HttpOnly; Max-Age=${maxAge}`,
           "Location": "/", // 登录成功跳转首页
         },
       });
