@@ -31,16 +31,15 @@ export const onRequest = async (request: Request, env, ctx) => {
       });
     }
 
-    // /UUID/check
-    if (pathname === `/${env.UUID}/check`) {
+    if (pathname === `/check`) {
       const results = await checkAllSites(env, "manual");
       return new Response(JSON.stringify(results, null, 2), {
         headers: { "Content-Type": "application/json" },
       });
     }
 
-    // /UUID/log?name=xxx&limit=20
-    if (pathname === `/${env.UUID}/log`) {
+    // /log?name=xxx&limit=20
+    if (pathname === `/log`) {
       const { searchParams } = url;
       const name = searchParams.get("name");
       const limit = parseInt(searchParams.get("limit") || "20");
@@ -62,13 +61,12 @@ export const onRequest = async (request: Request, env, ctx) => {
       });
     }
 
-    // /UUID/info
-    if (pathname === `/${env.UUID}/info`) {
+    // /info
+    if (pathname === `/info`) {
       return new Response(JSON.stringify({
-        uuid: env.UUID,
         config: parseConfig(env.MONITOR_CONFIG_JSON),
         telegram: {
-          tokenExists: !!env.TELEGRAM_BOT_TOKEN,
+          tokenExists: env.TELEGRAM_BOT_TOKEN,
           chatId: env.TELEGRAM_CHAT_ID,
         },
       }, null, 2), {
