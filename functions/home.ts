@@ -1,4 +1,4 @@
-// home.ts
+// functions/home.ts
 import { parseConfig } from "../lib/config";
 
 export async function renderHomePage(env): Promise<Response> {
@@ -9,119 +9,105 @@ export async function renderHomePage(env): Promise<Response> {
     <html lang="zh">
     <head>
       <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       <title>网站监控状态</title>
       <style>
         body {
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
             Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
-          padding: 2rem 3rem;
+          padding: 1rem;
           background: #f0f4f8;
           color: #333;
-          min-width: 360px;
+          margin: 0 auto;
+          max-width: 1000px;
         }
         h1 {
-          margin-bottom: 1.2rem;
+          font-size: 1.8rem;
           font-weight: 700;
-          font-size: 2rem;
-          display: flex;
-          align-items: center;
-          gap: 0.6rem;
+          margin-bottom: 1rem;
         }
         select#timeRangeSelect {
-          margin-bottom: 1.5rem;
           padding: 0.4rem 0.6rem;
           font-size: 1rem;
           border-radius: 6px;
           border: 1.5px solid #cbd5e1;
           background-color: #fff;
-          transition: border-color 0.3s ease;
-          cursor: pointer;
-          user-select: none;
+          margin-bottom: 1.2rem;
+          max-width: 100%;
         }
-        select#timeRangeSelect:hover,
         select#timeRangeSelect:focus {
-          border-color: #2563eb;
           outline: none;
-          box-shadow: 0 0 8px rgba(37, 99, 235, 0.4);
+          border-color: #2563eb;
+        }
+        .table-wrapper {
+          overflow-x: auto;
         }
         table {
           width: 100%;
+          min-width: 600px;
           border-collapse: separate;
           border-spacing: 0;
-          border-radius: 8px;
-          overflow: hidden;
           background: #fff;
-          box-shadow: 0 2px 8px rgb(0 0 0 / 0.1);
+          border-radius: 8px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
         }
         thead tr {
           background-color: #e2e8f0;
         }
         th, td {
-          padding: 0.8rem 1rem;
+          padding: 0.75rem 1rem;
           text-align: left;
-          font-weight: 500;
-          border-bottom: 1px solid #e2e8f0;
           font-size: 0.95rem;
+          border-bottom: 1px solid #e2e8f0;
           vertical-align: middle;
-          user-select: text;
         }
         tbody tr:hover {
-          background-color: #f1f5f9;
+          background-color: #f9fafb;
         }
         a {
           color: #2563eb;
           text-decoration: none;
-          transition: color 0.3s ease;
         }
         a:hover {
-          color: #1d4ed8;
           text-decoration: underline;
         }
         .status-bar {
           display: flex;
-          gap: 3px;
           flex-wrap: wrap;
-          max-width: 100%;
-          user-select: none;
+          gap: 3px;
         }
         .bar {
-          width: 3.5%;
-          min-width: 12px;
+          width: 3.2%;
+          min-width: 10px;
           height: 16px;
           border-radius: 3px;
           background-color: #d1d5db;
           cursor: pointer;
-          transition: background-color 0.25s ease, transform 0.15s ease;
         }
         .bar.ok {
-          background-color: #22c55e; /* 绿色 */
+          background-color: #22c55e;
         }
         .bar.fail {
-          background-color: #ef4444; /* 红色 */
+          background-color: #ef4444;
         }
         .bar:hover {
-          outline: 2px solid #111;
-          transform: scale(1.15);
-          z-index: 10;
-          box-shadow: 0 0 5px rgba(0,0,0,0.2);
+          outline: 1px solid #000;
         }
+
         .popup {
           position: fixed;
-          top: 10%;
+          top: 8%;
           left: 50%;
           transform: translateX(-50%);
           background: #fff;
           border-radius: 10px;
-          border: 1px solid #ccc;
-          box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-          padding: 1.2rem 1.5rem;
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+          padding: 1rem 1.2rem;
           z-index: 1000;
           max-height: 75vh;
           overflow-y: auto;
-          min-width: 320px;
-          max-width: 90vw;
-          font-size: 0.9rem;
-          color: #222;
+          width: 90vw;
+          max-width: 600px;
         }
         .popup-close {
           text-align: right;
@@ -135,65 +121,74 @@ export async function renderHomePage(env): Promise<Response> {
           padding: 0.3rem 0.8rem;
           cursor: pointer;
           font-weight: 600;
-          transition: background-color 0.3s ease;
         }
         .popup-close button:hover {
           background-color: #dc2626;
         }
         .overlay {
           position: fixed;
-          top: 0; left: 0;
-          width: 100vw; height: 100vh;
-          background: rgba(0, 0, 0, 0.45);
+          top: 0;
+          left: 0;
+          width: 100vw;
+          height: 100vh;
+          background: rgba(0, 0, 0, 0.5);
           z-index: 999;
         }
-        h3 {
-          margin-top: 0;
-          margin-bottom: 0.8rem;
-          font-weight: 700;
-          font-size: 1.2rem;
-          color: #111827;
+
+        @media (max-width: 600px) {
+          h1 {
+            font-size: 1.5rem;
+          }
+          th, td {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.9rem;
+          }
+          .bar {
+            height: 14px;
+            min-width: 8px;
+          }
         }
       </style>
     </head>
     <body>
       <h1>📊 网站监控状态</h1>
-      <label for="timeRangeSelect" style="font-weight:600; margin-bottom: 0.4rem; display:block;">
-        选择时间范围：
-      </label>
-      <select id="timeRangeSelect" aria-label="选择时间范围">
+      <label for="timeRangeSelect">选择时间范围：</label>
+      <select id="timeRangeSelect">
         <option value="24">最近24小时</option>
         <option value="168">最近一周（7天）</option>
         <option value="336">最近两周（14天）</option>
         <option value="all">所有数据</option>
       </select>
-      <table>
-        <thead>
-          <tr>
-            <th>网站</th>
-            <th>状态变化（按小时）</th>
-          </tr>
-        </thead>
-        <tbody>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>网站</th>
+              <th>状态变化（按小时）</th>
+            </tr>
+          </thead>
+          <tbody>
   `;
 
   for (const site of config) {
+    const safeId = site.name.replace(/[^a-zA-Z0-9]/g, "");
     html += `
       <tr>
-        <td><a href="${site.url}" target="_blank" rel="noopener noreferrer">${site.name}</a></td>
-        <td><div class="status-bar" id="bar-${site.name.replace(/[^a-zA-Z0-9]/g, "")}">加载中...</div></td>
+        <td><a href="${site.url}" target="_blank">${site.name}</a></td>
+        <td><div class="status-bar" id="bar-${safeId}">加载中...</div></td>
       </tr>
     `;
   }
 
   html += `
-        </tbody>
-      </table>
+          </tbody>
+        </table>
+      </div>
       <div id="popup" class="popup" style="display:none;"></div>
       <div id="overlay" class="overlay" style="display:none;" onclick="closePopup()"></div>
       <script>
         const now = new Date();
-        const nowTs = Math.floor(now.getTime() / 1000); // 当前秒级时间戳
+        const nowTs = Math.floor(now.getTime() / 1000);
         const sites = ${JSON.stringify(config.map(site => site.name))};
 
         function getHourKeyFromTimestamp(ts) {
@@ -206,9 +201,8 @@ export async function renderHomePage(env): Promise<Response> {
         }
 
         function showPopup(el) {
-          const hour = el.getAttribute('data-hour'); // 格式是 "YYYY-MM-DD HH"
+          const hour = el.getAttribute('data-hour');
           const siteName = el.getAttribute('data-siteName');
-
           const [datePart, hourPart] = hour.split(' ');
           const [year, month, day] = datePart.split('-').map(Number);
           const hourNum = Number(hourPart);
@@ -275,7 +269,8 @@ export async function renderHomePage(env): Promise<Response> {
                 } else {
                   totalHours = parseInt(timeRange, 10);
                 }
-                totalHours = Math.min(totalHours, 336); // 最多显示14天
+
+                totalHours = Math.min(totalHours, 30*24); // 最多显示30天
 
                 const bars = [];
                 for (let i = totalHours - 1; i >= 0; i--) {
@@ -295,10 +290,9 @@ export async function renderHomePage(env): Promise<Response> {
           });
         }
 
-        // 页面加载默认展示最近24小时
+        // 默认加载24小时
         renderStatusBars('24');
 
-        // 监听时间选择变化
         document.getElementById('timeRangeSelect').addEventListener('change', e => {
           renderStatusBars(e.target.value);
         });
