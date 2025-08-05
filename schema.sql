@@ -2,7 +2,7 @@ CREATE TABLE IF NOT EXISTS logs_new (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT,
   status TEXT,
-  timestamp TEXT,
+  timestamp INTEGER,
   scheduled INTEGER,
   duration_ms INTEGER
 );
