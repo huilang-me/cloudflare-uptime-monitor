@@ -1,16 +1,8 @@
-// functions/home.ts
+// home.ts
 import { parseConfig } from "../lib/config";
-
-function getHourKey(timestamp: string): string {
-  const date = new Date(timestamp);
-  date.setMinutes(0, 0, 0);
-  return date.toISOString();
-}
 
 export async function renderHomePage(env): Promise<Response> {
   const config = parseConfig(env.MONITOR_CONFIG_JSON);
-  const now = Date.now();
-  const since = now - 24 * 60 * 60 * 1000; // 过去24小时
 
   let html = `
     <!DOCTYPE html>
@@ -75,35 +67,10 @@ export async function renderHomePage(env): Promise<Response> {
   `;
 
   for (const site of config) {
-    // 获取过去24小时的所有记录
-    const result = await env.DB.prepare(
-      `SELECT status, timestamp FROM logs WHERE name = ? AND timestamp >= ? ORDER BY timestamp ASC`
-    ).bind(site.name, new Date(since).toISOString()).all();
-
-    const hourlyMap = new Map<string, string[]>(); // key: hour ISO string, value: status[]
-
-    for (const log of result.results) {
-      const hour = getHourKey(log.timestamp);
-      if (!hourlyMap.has(hour)) hourlyMap.set(hour, []);
-      hourlyMap.get(hour)!.push(log.status);
-    }
-
-    // 构建最近24小时的24个小时块
-    const bars: string[] = [];
-    for (let i = 23; i >= 0; i--) {
-      const hourDate = new Date(now - i * 60 * 60 * 1000);
-      const hourKey = hourDate.toISOString().slice(0, 13) + ":00:00.000Z";
-      const statuses = hourlyMap.get(hourKey) || [];
-      const hasFailure = statuses.some(s => s !== "up");
-      const statusClass = hasFailure ? "fail" : (statuses.length > 0 ? "ok" : ""); // 没数据显示灰色
-      const title = `${hourDate.toLocaleString("zh-CN")}: ${statuses.length > 0 ? (hasFailure ? "异常" : "正常") : "无数据"}`;
-      bars.push(`<div class="bar ${statusClass}" title="${title}"></div>`);
-    }
-
     html += `
       <tr>
         <td><a href="${site.url}" target="_blank">${site.name}</a></td>
-        <td><div class="status-bar">${bars.join("")}</div></td>
+        <td><div class="status-bar" id="bar-${site.name.replace(/[^a-zA-Z0-9]/g, "")}">加载中...</div></td>
       </tr>
     `;
   }
@@ -111,6 +78,53 @@ export async function renderHomePage(env): Promise<Response> {
   html += `
         </tbody>
       </table>
+
+      <script>
+        const now = new Date();
+        const start = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+        const sites = ${JSON.stringify(config.map(site => site.name))};
+
+        function formatHour(dateStr) {
+          const d = new Date(dateStr);
+          d.setMinutes(0, 0, 0);
+          return d.toLocaleString('zh-CN', { hour: '2-digit', hour12: false });
+        }
+
+        function getHourKey(dateStr) {
+          const d = new Date(dateStr);
+          d.setMinutes(0, 0, 0);
+          return d.getFullYear() + '-' + (d.getMonth()+1).toString().padStart(2, '0') + '-' + d.getDate().toString().padStart(2, '0') + ' ' + d.getHours().toString().padStart(2, '0') + ':00';
+        }
+
+        sites.forEach(name => {
+          fetch('/log?name=' + encodeURIComponent(name) + '&limit=500')
+            .then(res => res.json())
+            .then(logs => {
+              const hourMap = {};
+              logs.forEach(log => {
+                const key = getHourKey(log.timestamp);
+                if (!hourMap[key]) hourMap[key] = [];
+                hourMap[key].push(log.status);
+              });
+
+              const bars = [];
+              for (let i = 23; i >= 0; i--) {
+                const d = new Date(now.getTime() - i * 60 * 60 * 1000);
+                d.setMinutes(0, 0, 0);
+                const key = getHourKey(d.toISOString());
+                const statuses = hourMap[key] || [];
+                const hasFail = statuses.some(s => s !== 'up');
+                const cls = statuses.length === 0 ? '' : hasFail ? 'fail' : 'ok';
+                const title = key + (statuses.length === 0 ? ': 无数据' : hasFail ? ': 异常' : ': 正常');
+                bars.push(`<div class="bar ${cls}" title="${title}"></div>`);
+              }
+
+              const container = document.getElementById('bar-' + name.replace(/[^a-zA-Z0-9]/g, ""));
+              container.innerHTML = bars.join('');
+            });
+        });
+      </script>
     </body>
     </html>
   `;
