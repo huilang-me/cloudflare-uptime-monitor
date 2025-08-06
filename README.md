@@ -67,9 +67,12 @@
 | `CLOUDFLARE_API_TOKEN`  | Secret   | `xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`                                                              |
 | `TELEGRAM_BOT_TOKEN`    | Secret   | `123456789:ABCxxxxxxxxxxxxxxxxxxxxxxxx`                                                         |
 | `TELEGRAM_CHAT_ID`      | Secret   | `-1001234567890`                                                                                |
+| `USERNAME`              | Secret   | `admin`(用户名)                                                                                  |
+| `PASSWORD`              | Secret   | `123456`(密码)                                                                                  |
 | `MONITOR_CONFIG_JSON`   | Variable | `[{"name":"example","url":"https://example.com"},{"name":"google","url":"https://google.com"}]` |
 | `D1_DATABASE_NAME`      | Variable | `uptime-monitor`（你创建的 D1 名称）                                                             |
 | `D1_DATABASE_ID`        | Variable | `7d08819d-xxxx-xxxx-xxxx-xxxxxxxxxxxx`                                                          |
+          
 
 ---
 
@@ -102,10 +105,8 @@ https://your-project.workers.dev/
 访问：
 
 ```
-https://your-project.workers.dev/UUID/check
+https://your-project.workers.dev/check
 ```
-
-将 `UUID` 替换为你设置的环境变量值。
 
 ---
 
@@ -114,11 +115,12 @@ https://your-project.workers.dev/UUID/check
 访问：
 
 ```
-https://your-project.workers.dev/UUID/log?name=example&limit=20
+https://your-project.workers.dev/log?name=example&from=xxx&to=xxx
 ```
 
 * `name`: 监控网站配置中的 `name`
-* `limit`: 返回日志条数，默认最多 20
+* `from`: 开始时间（时间戳）
+* `to`: 结束时间（时间戳）
 
 ---
 
@@ -127,7 +129,7 @@ https://your-project.workers.dev/UUID/log?name=example&limit=20
 查看系统当前配置：
 
 ```
-https://your-project.workers.dev/UUID/info
+https://your-project.workers.dev/info
 ```
 
 ---
@@ -143,7 +145,6 @@ https://your-project.workers.dev/UUID/info
 
 ## 🔐 安全建议
 
-* `UUID` 建议使用复杂随机值（如 uuidgen）防止滥用接口
 * 所有敏感信息（如 Telegram Token）均存储于 GitHub Secrets
 * D1 无需手动配置连接，仅需配置 ID + 名称
 
@@ -158,7 +159,7 @@ https://your-project.workers.dev/UUID/info
 ### Q: 如何调试定时任务？
 
 * 在 \[Cloudflare Dashboard > Workers & D1 > Cron Triggers] 可查看执行日志
-* 或通过 `/UUID/check` 路径手动测试
+* 或通过 `/check` 路径手动测试
 
 ### Q: 数据库连接失败？
 
