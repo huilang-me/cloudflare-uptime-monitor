@@ -67,7 +67,6 @@
 | `CLOUDFLARE_API_TOKEN`  | Secret   | `xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`                                                              |
 | `TELEGRAM_BOT_TOKEN`    | Secret   | `123456789:ABCxxxxxxxxxxxxxxxxxxxxxxxx`                                                         |
 | `TELEGRAM_CHAT_ID`      | Secret   | `-1001234567890`                                                                                |
-| `UUID`                  | Secret   | `e2cf3c1d-xxxx-xxxx-xxxx-xxxxxxxxxxxx`（可用 `uuidgen` 生成）                                    |
 | `MONITOR_CONFIG_JSON`   | Variable | `[{"name":"example","url":"https://example.com"},{"name":"google","url":"https://google.com"}]` |
 | `D1_DATABASE_NAME`      | Variable | `uptime-monitor`（你创建的 D1 名称）                                                             |
 | `D1_DATABASE_ID`        | Variable | `7d08819d-xxxx-xxxx-xxxx-xxxxxxxxxxxx`                                                          |
@@ -178,13 +177,16 @@ https://your-project.workers.dev/UUID/info
 ├── functions/                # 函数目录
 │   ├── check.ts              # 检测网站在线
 │   ├── fetch.ts
+│   ├── home.ts
+│   ├── logs.ts
 │   └── scheduled.ts          # 定时检测
 ├── lib/                      # 库函数目录
+│   ├── auth.ts
 │   ├── config.ts             # 配置解析
 │   ├── fetchWithTimeout.ts   # 带超时的 fetch 函数
 │   ├── healthcheck.ts        # 健康检查
-│   └── telegram.ts           # Telegram 通知
-│   ├── time.ts               # 时间相关函数
+│   ├── telegram.ts           # Telegram 通知
+│   └── time.ts               # 时间相关函数
 ├── index.ts                  # Cloudflare Workers 主文件
 ├── schema.sql                # D1 数据库结构定义
 ├── wrangler.toml             # Cloudflare Wrangler 配置（自动生成）
